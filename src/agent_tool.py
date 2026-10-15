@@ -10,6 +10,8 @@ from langchain_core.tools import tool
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 
+from src.db_driver import SQL_SERVER_DRIVER, ENGINE_OPTIONS
+
 script_dir = Path(__file__).resolve().parent
 project_root = script_dir.parent
 
@@ -71,7 +73,7 @@ def query_telemetry_db(sql_query: str) -> str:
     Always write standard T-SQL queries.
     """
     connection_string = (
-            f"DRIVER={{ODBC Driver 18 for SQL Server}};"
+            f"DRIVER={{{SQL_SERVER_DRIVER}}};"
             f"SERVER={db_host},{db_port};"
             f"DATABASE=master;"
             f"UID={db_user};"
@@ -82,7 +84,7 @@ def query_telemetry_db(sql_query: str) -> str:
 
     params = urllib.parse.quote_plus(connection_string)
     
-    engine = create_engine(f"mssql+pyodbc:///?odbc_connect={params}")
+    engine = create_engine(f"mssql+pyodbc:///?odbc_connect={params}", **ENGINE_OPTIONS)
     
     try:
         if not sql_query.strip().upper().startswith("SELECT"):

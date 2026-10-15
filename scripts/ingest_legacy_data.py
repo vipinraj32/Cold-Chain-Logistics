@@ -1,7 +1,6 @@
-from pathlib import Path
-<<<<<<< HEAD
 import os
 import urllib.parse
+from pathlib import Path
 
 import pandas as pd
 import pyodbc
@@ -22,7 +21,7 @@ if data_path is None:
         f"Dataset not found. Expected {dataset_name} in one of:\n"
         + "\n".join(str(path.parent) for path in data_candidates)
     )
-=======
+
 import pandas as pd
 import urllib
 import os
@@ -36,12 +35,12 @@ project_root = script_dir.parents[0] # climbs up 1 levels to project root
 load_dotenv(project_root / ".env")
 
 data_path = project_root / "data" / "raw" / "dynamic_supply_chain_logistics_dataset.csv"
->>>>>>> origin/main
+
 
 db_host = os.getenv("SQL_SERVER_HOST", "localhost")
 db_port = os.getenv("SQL_SERVER_PORT", "1433")
 db_user = os.getenv("SQL_ADMIN_USER")
-<<<<<<< HEAD
+
 
 print(f"Loading CSV from {data_path}...")
 df = pd.read_csv(data_path)
@@ -105,7 +104,7 @@ table_name = "TBL_SC_FLEET_HIST_RAW"
 print(f"Ingesting into {table_name}. This may take a minute...")
 df_legacy.to_sql(table_name, engine, if_exists="replace", index=False, schema="dbo")
 print("Legacy data ingestion complete!")
-=======
+
 db_password = os.getenv("SQL_ADMIN_PASSWORD")
 
 # 1. Load the raw dataset
@@ -154,4 +153,4 @@ print(f"Ingesting into {table_name}. This may take a minute...")
 df_legacy.to_sql(table_name, engine, if_exists='replace', index=False, schema='dbo')
 
 print("Legacy data ingestion complete!")
->>>>>>> origin/main
+

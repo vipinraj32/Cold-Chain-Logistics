@@ -43,7 +43,10 @@ if HASH_CACHE_FILE.exists():
 # ==========================================
 # 2. DYNAMIC ENVIRONMENT ROUTING
 # ==========================================
-EMBEDDINGS_MODEL_SETTING = os.getenv("Embeddings_model", "LOCAL").strip().upper()
+EMBEDDINGS_MODEL_SETTING = os.getenv(
+    "EMBEDDING_MODEL",
+    os.getenv("Embeddings_model", "LOCAL"),
+).strip().upper()
 
 if EMBEDDINGS_MODEL_SETTING == "OPENAI":
     print("Mode: Utilizing Cloud OpenAI Embeddings (1536 Dim)...")
@@ -52,12 +55,21 @@ if EMBEDDINGS_MODEL_SETTING == "OPENAI":
     TARGET_DIMENSION = 1536
 else:
     # Read the explicit model identifier casing string from the .env parameters
-    local_model_target = os.getenv("Local_Embedding_Model", "BAAI/bge-m3").strip()
+    local_model_target = os.getenv(
+        "LOCAL_EMBEDDING_MODEL",
+        os.getenv(
+            "Local_Embedding_Model",
+            os.getenv("LoCAL_EMBEDDING_MODEL", "BAAI/bge-m3"),
+        ),
+    ).strip()
+    model_cache_dir = cache_dir / "huggingface"
+    model_cache_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"    Mode: Local Fallback Settings Activated. Launching [{local_model_target}] (1024 Dim)...")
     from langchain_huggingface import HuggingFaceEmbeddings
     embeddings = HuggingFaceEmbeddings(
         model_name=local_model_target,   # Passes parameter dynamically
+        cache_folder=str(model_cache_dir),
         model_kwargs={'device': 'cpu'}
     )
     INDEX_NAME = "fde-sop-index-local"   # Isolated Local Model Index

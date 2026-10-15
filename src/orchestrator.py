@@ -1,6 +1,9 @@
 import os
 import sys
 from pathlib import Path
+
+# Windows consoles default to cp1252, which cannot print emoji from LLM replies
+sys.stdout.reconfigure(encoding="utf-8")
 from dotenv import load_dotenv
 from typing import Annotated, TypedDict
 
@@ -31,6 +34,8 @@ class AgentState(TypedDict):
 AGENT_LLM_SETTING=os.getenv("AGENT_LLM", "ANTHROPIC").strip().upper()
 
 if AGENT_LLM_SETTING=="ANTHROPIC":
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        raise ValueError("Missing ANTHROPIC_API_KEY in .env")
     print("Brain Mode : Utilizing Anthropic LLM")
     from langchain_anthropic import ChatAnthropic
     agent_llm=ChatAnthropic(model_name="claude-sonnet-4-6", temperature=0.0, max_tokens=1024)
@@ -46,7 +51,7 @@ def reasoning_node(state:AgentState):
     It takes the current state of the agent and produces a response based on the tools and LLM.
     """
     response=llm_with_tools.invoke(state["messages"])
-    return {"response":response}
+    return {"messages":[response]}
 
 print("Compliling LangGrapth FDE Orchestrator")
 graph_builder=StateGraph(AgentState)
@@ -66,17 +71,17 @@ if __name__=="__main__":
     print(f"Configured Execution: [LLM: {AGENT_LLM_SETTING}] -> [Embedding: {os.getenv('Embedding_Model', 'LOCAL')}]")
     print("="*55 + "\n")
 
-    prompt_path=project_root / "src" / "prompts" / "system_prompt.txt"
+    prompt_path=project_root / "src" / "prompts" / "system.prompt.txt"
     try:
-        with open(prompt_path, "r") as f:
-            system_prompt=f.read()
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            system_instruction=f.read()
     except FileNotFoundError:
         print(f"System prompt file not found at {prompt_path}. Please ensure the file exists.")
         system_instruction="You are an AI agent designed to assist with supply chain operations. You have access to various tools and databases to provide accurate and timely information."
 
     system_prompt=SystemMessage(content=system_instruction)
     thread_config={"thread_id":"production_test_1"}
-    fde_agent.invoke({"messages":[system_prompt]}, config=thread_config)
+    is_first_turn=True
 
     while True:
         user_input=input("\nDispatcher> ")
@@ -84,13 +89,16 @@ if __name__=="__main__":
             print("Exiting FDE Orchestrator. Goodbye!")
             break
 
-        events=fde_agent.stream({"messages": [("user", user_input)]}, config=thread_config)
+        new_messages=[("user", user_input)]
+        if is_first_turn:
+            new_messages.insert(0, system_prompt)
+            is_first_turn=False
+        events=fde_agent.stream({"messages": new_messages}, config=thread_config)
         for event in events:
             for node_name, node_state in event.items():
                 if node_name=="tools":
                    print("[System] Retriving external data elements via ToolNode")
                 elif node_name=="reasoner":
-                    print(f"\n[Reasoner Node] Response: {node_state.get('response', 'No response generated.')}")
                     latest_msg=node_state["messages"][-1]  
                     if latest_msg.content:
                         print(f"[Reasoner Node] Latest Message: {latest_msg.content}") 
